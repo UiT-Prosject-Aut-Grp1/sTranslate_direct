@@ -2,40 +2,71 @@
 open System
 open System.IO
 open System.Reflection
+open System.Text
 open XltEnums
 open XltTool
 
+
+let addToList (myList:List<'a>) element = element::myList
+
+let StressTest translateFunction fileName numLoops = 
+    printfn "Using search data in: %s" fileName
+    let startTime = DateTime.Now
+    // Initialize accumulator variables
+    let mutable searchCounter = 0
+    let mutable loopTimes : List<TimeSpan> = []
+    // Create string array of each line in the .csv file
+    let lines = System.IO.File.ReadAllLines(fileName, Encoding.GetEncoding("ISO-8859-1"))
+    // Do the .csv search numLoops number of times
+    for i in 1 .. numLoops do
+        let loopStartTime = DateTime.Now
+        for line in lines do
+            // Get search criteria from the current line
+            let splitLine = line.Split([|';'|])
+            let fromText = splitLine.[0]
+            let context = splitLine.[1]
+            let property = ToPropertyType splitLine.[2]
+            let criteria = ToCriteria splitLine.[3]
+            let toLang = splitLine.[4]
+            // Call the translation function
+            let toText = translateFunction criteria fromText property context toLang
+            toText |> ignore
+            //printfn "EN: %s; NO: %s" fromText toText
+            // Track number of individual searches
+            searchCounter <- searchCounter+1
+        // Time the individual loop
+        loopTimes <- addToList loopTimes (DateTime.Now.Subtract(loopStartTime))
+        // Track completion
+        let pctComplete = Math.Floor (float i)/(float numLoops)*100.0
+        printf "\r%i%%" (int pctComplete)
+    printfn ""
+    // Time the entire stresstest
+    let elapsedTime = DateTime.Now.Subtract(startTime) 
+    (searchCounter,elapsedTime,List.rev loopTimes)
+
+
 [<EntryPoint>]
 let TestApp argv = 
-    // Print arguments for debugging
-    printfn "%A" argv
 
-    // Get time
-    let startTime = DateTime.Now
+    // Call the stresstest
+    let translateFunction = ToText
+    let fileName = __SOURCE_DIRECTORY__ + @"\StressTest.csv"
+    let numLoops = 100
+    let (searchCounter,elapsedTime,loopTimes) = StressTest translateFunction fileName numLoops
     
-    // Get my name
-    let strArr = Assembly.GetCallingAssembly().FullName.Split(',')
-    let myName = strArr.[0]
-    
-    // Exit if too few arguments
-    if Array.length argv < 5 then
-        eprintf "Incorrect number of arguments!"
-        exit 1
+    // Print test results
+    printfn "Duration: %A sec" elapsedTime
+    printfn "Searches: %i" searchCounter
+    printfn "Loops: %i" numLoops
+    printfn "Looptimes: %A" loopTimes
 
-    let context = argv.[0]
-    let property = ToPropertyType argv.[1]
-    let criteria = ToCriteria argv.[2]
-    let toLang = argv.[3]
-    let text = argv.[4]
-    
-    // Calls translation and prints output  
-    let toText = GetToText criteria text property context toLang
-    printfn "%s: English: \"%s\" translated to Norwegian: \"%s\"" myName text toText
+    // Saves to file
+    let outFile = new StreamWriter(__SOURCE_DIRECTORY__ + @"\Logg.csv")
+    let dataFrame = loopTimes
+                    |> Seq.iter (fun y -> outFile.WriteLine(y.ToString()))
+    outFile.Close() |> ignore
 
-    // Find elapsed time
-    let elapsedTime = DateTime.Now.Subtract(startTime)
-    printfn "%s: Duration: %A" myName elapsedTime
+    // Keypress to close terminal
+    System.Console.ReadKey() |> ignore
 
-    Console.ReadKey() |> ignore
-    0
-
+    0 // return an integer exit code
