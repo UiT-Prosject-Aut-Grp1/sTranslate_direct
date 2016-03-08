@@ -1,4 +1,5 @@
-﻿module XltEnums
+﻿namespace sTranslate_direct
+module XltEnums =
     open Enums
 
     // Defines the types

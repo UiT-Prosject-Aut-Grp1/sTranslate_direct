@@ -1,4 +1,5 @@
-﻿module XltTool
+﻿namespace sTranslate_direct
+module XltTool =
     open System
     open System.Data
     open System.Data.Linq

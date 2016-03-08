@@ -1,4 +1,5 @@
-﻿module Enums
+﻿namespace sTranslate_direct
+module Enums =
     open System
 
     //////////////////////////

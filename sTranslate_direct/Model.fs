@@ -1,4 +1,5 @@
-﻿module Model
+﻿namespace sTranslate_direct
+module Model =
 
     type Translation =
         {
